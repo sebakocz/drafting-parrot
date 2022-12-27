@@ -8,16 +8,21 @@ from tortoise import fields
 from Database.Models.card import Card
 from Database.Models.settings import Settings
 
+
 class PickType(Enum):
     """Pick type enum."""
+
     SINGLETON = "singleton"
     BLUEPRINT = "blueprint"
 
+
 class DraftStatus(Enum):
     """Draft status enum."""
+
     PREPARING = "preparing"
     RUNNING = "running"
     FINISHED = "finished"
+
 
 class Draft(Model):
 
@@ -41,5 +46,3 @@ class Draft(Model):
             await participant.save()
 
         await super().delete(*args, **kwargs)
-
-

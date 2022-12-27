@@ -1,5 +1,6 @@
 from tortoise import fields, Model
 
+
 class Settings(Model):
     """Settings model."""
 

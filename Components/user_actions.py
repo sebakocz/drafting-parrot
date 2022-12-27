@@ -82,13 +82,28 @@ async def start_draft(draft_name: str, user_discord_id: int, channel_id: int):
 
     # check if settings make sense
     # current players * packs per player * cards per pack <= total cards
-    if len(draft.participants) * draft.settings.packs_per_player * draft.settings.cards_per_pack > len(draft.cards):
-        raise ValueError("Draft settings are not valid. Make sure you have enough cards for the draft.")
+    if len(
+        draft.participants
+    ) * draft.settings.packs_per_player * draft.settings.cards_per_pack > len(
+        draft.cards
+    ):
+        raise ValueError(
+            "Draft settings are not valid. Make sure you have enough cards for the draft."
+        )
 
     # create cards for packs
     copied_cardpool = await draft.cards.all()
     shuffle(copied_cardpool)
-    pack_cards = [copied_cardpool[i:i + draft.settings.cards_per_pack] for i in range(0, draft.settings.cards_per_pack * draft.settings.packs_per_player * len(draft.participants), draft.settings.cards_per_pack)]
+    pack_cards = [
+        copied_cardpool[i : i + draft.settings.cards_per_pack]
+        for i in range(
+            0,
+            draft.settings.cards_per_pack
+            * draft.settings.packs_per_player
+            * len(draft.participants),
+            draft.settings.cards_per_pack,
+        )
+    ]
 
     # create packs
     for cards in pack_cards:
@@ -103,7 +118,7 @@ async def start_draft(draft_name: str, user_discord_id: int, channel_id: int):
     return "Draft started successfully. Have fun!", draft
 
 
-async def stop_draft(draft_name:str, user_discord_id: int):
+async def stop_draft(draft_name: str, user_discord_id: int):
     """Handle stop draft interaction."""
 
     try:
@@ -144,7 +159,9 @@ async def submit_deck(cardlist: Attachment, user_discord_id: int):
         raise ValueError("You are not part of a draft.")
 
     if draft.status != DraftStatus.FINISHED.value:
-        raise ValueError("Draft did not finish yet. You can't submit your decklist yet.")
+        raise ValueError(
+            "Draft did not finish yet. You can't submit your decklist yet."
+        )
 
     # check if decklist is set
     if participant.deck_string:
@@ -169,9 +186,13 @@ async def submit_deck(cardlist: Attachment, user_discord_id: int):
         if line.startswith("#"):
             continue
         if not line.startswith(("1 ", "2 ", "3 ")):
-            raise ValueError("Invalid decklist. Each non-comment (#) line must start with '1', '2' or '3'.")
+            raise ValueError(
+                "Invalid decklist. Each non-comment (#) line must start with '1', '2' or '3'."
+            )
         if not line[3:].strip():
-            raise ValueError("Invalid decklist. Each non-comment (#) line must have a card name, card link or card uid.")
+            raise ValueError(
+                "Invalid decklist. Each non-comment (#) line must have a card name, card link or card uid."
+            )
 
     # save decklist
     participant.deck_string = "\n".join(lines)

@@ -10,9 +10,19 @@ from Database.Models.card import Card
 from Database.Models.draft import PickType, DraftStatus, Draft
 from Database.Models.settings import Settings
 from Database.Models.user import User
-from Database.draft_setup import create_draft, get_cards_from_data, get_or_create_user_by_discord_id
-from Tests.constants import OUTPUT_CARD_OBJECTS, INPUT_FILE_LINES, DRAFT_OPTIONS, DRAFT_OPTIONS_TWO, \
-    INPUT_FILE_LINES_LONG, CARDS_LIST_LONG
+from Database.draft_setup import (
+    create_draft,
+    get_cards_from_data,
+    get_or_create_user_by_discord_id,
+)
+from Tests.constants import (
+    OUTPUT_CARD_OBJECTS,
+    INPUT_FILE_LINES,
+    DRAFT_OPTIONS,
+    DRAFT_OPTIONS_TWO,
+    INPUT_FILE_LINES_LONG,
+    CARDS_LIST_LONG,
+)
 from Utils.collective_api import get_card_data
 
 if platform.system() == "Windows":
@@ -30,6 +40,7 @@ async def test_can_get_cardpool():
     """Test if we can get a cardpool from the collective api."""
     result = await get_card_data(INPUT_FILE_LINES)
     assert result == OUTPUT_CARD_OBJECTS
+
 
 @pytest.fixture(autouse=True)
 async def initialize_database():
@@ -54,7 +65,6 @@ async def test_can_create_draft():
 
     await draft.fetch_related("cards", "settings", "participants", "owner")
 
-
     assert draft is not None
     assert draft.name == DRAFT_OPTIONS["name"]
     assert draft.description == DRAFT_OPTIONS["description"]
@@ -68,8 +78,12 @@ async def test_can_create_draft():
     await draft.delete()
 
     assert len(await Card.filter(draft=draft)) == 0, "Related cards should be deleted"
-    assert await Settings.get_or_none(draft=draft) is None, "Related settings should be deleted"
-    assert await User.get_or_none(discord_id=DRAFT_OPTIONS["owner_discord_id"]) is not None, "Owner should not be deleted"
+    assert (
+        await Settings.get_or_none(draft=draft) is None
+    ), "Related settings should be deleted"
+    assert (
+        await User.get_or_none(discord_id=DRAFT_OPTIONS["owner_discord_id"]) is not None
+    ), "Owner should not be deleted"
 
 
 # @pytest.mark.skip
@@ -92,7 +106,9 @@ async def test_can_join_draft():
     await user_actions.join_draft(draft.name, user4_id)
 
     with pytest.raises(ValueError):
-        await user_actions.join_draft(draft.name, user5_id), "Should not be able to join draft due to max players"
+        await user_actions.join_draft(
+            draft.name, user5_id
+        ), "Should not be able to join draft due to max players"
 
     await draft.fetch_related("participants")
 
@@ -100,9 +116,15 @@ async def test_can_join_draft():
 
     await draft.delete()
 
-    assert await User.get_or_none(discord_id=user1_id) is not None, "User1 should not be deleted"
-    assert await User.get_or_none(discord_id=user2_id) is not None, "User2 should not be deleted"
-    assert await User.get_or_none(discord_id=user3_id) is not None, "User3 should not be deleted"
+    assert (
+        await User.get_or_none(discord_id=user1_id) is not None
+    ), "User1 should not be deleted"
+    assert (
+        await User.get_or_none(discord_id=user2_id) is not None
+    ), "User2 should not be deleted"
+    assert (
+        await User.get_or_none(discord_id=user3_id) is not None
+    ), "User3 should not be deleted"
 
 
 # @pytest.mark.skip
@@ -130,7 +152,9 @@ async def test_can_leave_draft():
     user_id = 123
 
     with pytest.raises(ValueError):
-        await user_actions.leave_draft("non-existant-draft", user_id), "Should not be able to leave draft that does not exist"
+        await user_actions.leave_draft(
+            "non-existant-draft", user_id
+        ), "Should not be able to leave draft that does not exist"
 
     draft = await create_draft(**DRAFT_OPTIONS)
 
@@ -139,11 +163,15 @@ async def test_can_leave_draft():
     await user_actions.leave_draft(draft.name, user_id)
 
     with pytest.raises(ValueError):
-        await user_actions.leave_draft(draft.name, user_id), "Should not be able to leave draft that user is not in"
+        await user_actions.leave_draft(
+            draft.name, user_id
+        ), "Should not be able to leave draft that user is not in"
 
     await draft.fetch_related("participants")
     assert len(draft.participants) == 0, "Should have 0 participants"
-    assert await User.get_or_none(discord_id=user_id) is not None, "User should not be deleted"
+    assert (
+        await User.get_or_none(discord_id=user_id) is not None
+    ), "User should not be deleted"
     assert draft.status == DraftStatus.PREPARING.value, "Draft should be preparing"
 
     await draft.delete()
@@ -168,16 +196,21 @@ async def test_can_start_draft():
         await user_actions.join_draft(draft.name, participant.discord_id)
 
     with pytest.raises(ValueError):
-        await user_actions.start_draft(draft.name, participants[1].discord_id, 123), "Should not be able to start draft if not owner"
+        await user_actions.start_draft(
+            draft.name, participants[1].discord_id, 123
+        ), "Should not be able to start draft if not owner"
 
     await user_actions.start_draft(draft.name, participants[0].discord_id, 123)
 
     draft = await Draft.get(name=draft.name)
     await draft.fetch_related("participants", "settings", "packs__cards")
 
-
     assert draft.status == DraftStatus.RUNNING.value, "Draft should be running"
-    assert len(draft.packs) == len(participants) * DRAFT_OPTIONS["packs_per_player"], "Should have <players * pack_per_player> total packs"
-    assert all(len(pack.cards) == draft.settings.cards_per_pack for pack in draft.packs), "Packs should have cards"
+    assert (
+        len(draft.packs) == len(participants) * DRAFT_OPTIONS["packs_per_player"]
+    ), "Should have <players * pack_per_player> total packs"
+    assert all(
+        len(pack.cards) == draft.settings.cards_per_pack for pack in draft.packs
+    ), "Packs should have cards"
 
     await draft.delete()

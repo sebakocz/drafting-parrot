@@ -16,6 +16,7 @@ def settings_field(settings: Settings):
 def players_field(draft):
     return {
         "name": f"Players ({len(draft.participants)}/{draft.max_participants})",
-        "value": "".join([f"<@{user.discord_id}>\n" for user in draft.participants]) or "No players yet. Come join!",
-        "inline": False
+        "value": "".join([f"<@{user.discord_id}>\n" for user in draft.participants])
+        or "No players yet. Come join!",
+        "inline": False,
     }

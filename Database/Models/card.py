@@ -1,5 +1,6 @@
 from tortoise import Model, fields
 
+
 class Card(Model):
     """Card model."""
 

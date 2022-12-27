@@ -10,7 +10,6 @@ from Database.Models.pack import Pack
 
 
 class View(ui.View):
-
     def __init__(self, pack: Pack, embeds: List[Embed]):
         self._embeds = embeds
         self._queue = deque(embeds)
@@ -40,7 +39,9 @@ class View(ui.View):
             child.disabled = True
 
         new_embed = self._queue[0]
-        new_embed.set_footer(text="This card has been picked automatically because you took too long to pick!")
+        new_embed.set_footer(
+            text="This card has been picked automatically because you took too long to pick!"
+        )
 
         await self.response.edit(view=self, embed=new_embed)
 

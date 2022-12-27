@@ -11,6 +11,7 @@ class ApiError(Exception):
     def __init__(self, message):
         self.message = message
 
+
 async def get_card_data(draft_cardpool_lines):
     public_cards = requests.get("https://server.collective.gg/api/public-cards/").json()
 

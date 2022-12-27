@@ -8,7 +8,6 @@ from Components.constants import EMBED_COLOR
 
 
 class Embed(discord.Embed):
-
     def __init__(self, interaction: Interaction, draft, **kwargs):
         super().__init__(
             title=f"{draft.name}",
@@ -36,7 +35,6 @@ class Embed(discord.Embed):
 
 
 class View(ui.View):
-
     def __init__(self, draft: Draft):
         super().__init__()
         url = "https://collectivedeck.codes/brew"
@@ -46,13 +44,15 @@ class View(ui.View):
         # Link buttons cannot be made with the decorator
         # Therefore we have to manually create one.
         # We add the quoted url to the button, and add the button to the view.
-        self.add_item(ui.Button(label='View Cardpool \N{EYES}', url=url))
+        self.add_item(ui.Button(label="View Cardpool \N{EYES}", url=url))
 
     # button to join the draft
     @ui.button(label="Join Draft \N{RAISED HAND}", style=discord.ButtonStyle.primary)
     async def join_draft(self, interaction: Interaction, _):
         try:
-            response = await user_actions.join_draft(self.draft.name, interaction.user.id)
+            response = await user_actions.join_draft(
+                self.draft.name, interaction.user.id
+            )
         except ValueError as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             return
@@ -65,7 +65,8 @@ class View(ui.View):
         # await interaction.response.send_message(f"{interaction.user.mention} joined the draft!")
 
 
-
 async def get_notification(draft_name, interaction):
-    draft = await Draft.get(name=draft_name).prefetch_related("owner", "participants", "settings")
+    draft = await Draft.get(name=draft_name).prefetch_related(
+        "owner", "participants", "settings"
+    )
     return Embed(interaction, draft), View(draft)

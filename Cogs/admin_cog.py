@@ -54,5 +54,6 @@ class AdminCog(commands.Cog):
         await ctx.send("Shutting down...")
         await self.bot.close()
 
+
 async def setup(bot):  # an extension must have a setup function
     await bot.add_cog(AdminCog(bot))  # adding a cog

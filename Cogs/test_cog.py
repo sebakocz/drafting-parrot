@@ -14,7 +14,11 @@ from Database.Models.draft import Draft
 from Database.Models.pack import Pack
 from Database.Models.user import User
 from Database.draft_setup import create_draft, get_cards_from_data
-from Components import open_draft_notification, player_pick_notification, finished_draft_global_notification
+from Components import (
+    open_draft_notification,
+    player_pick_notification,
+    finished_draft_global_notification,
+)
 from Tests.constants import DRAFT_OPTIONS, CARDS_LIST_LONG
 
 
@@ -50,8 +54,7 @@ class TestCog(commands.GroupCog, name="test"):
 
         # send test notification
         embed, view = await open_draft_notification.get_notification(
-            draft_name=DRAFT_OPTIONS["name"],
-            interaction=interaction
+            draft_name=DRAFT_OPTIONS["name"], interaction=interaction
         )
         await interaction.followup.send(embed=embed, view=view)
 
@@ -133,7 +136,6 @@ class TestCog(commands.GroupCog, name="test"):
         user = await join_draft(draft.name, interaction.user.id)
 
         await interaction.followup.send(f"{draft.name} is ready to be run.")
-
 
     # @app_commands.command()
     # async def create_draft(self, interaction: Interaction):

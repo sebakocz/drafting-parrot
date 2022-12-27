@@ -5,6 +5,7 @@ from Database.Models.draft import Draft, PickType
 from Database.Models.settings import Settings
 from Database.Models.user import User
 
+
 async def get_cards_from_data(cards: list, draft: Draft) -> list:
     """Get cards from object."""
     new_cards = []
@@ -16,14 +17,14 @@ async def get_cards_from_data(cards: list, draft: Draft) -> list:
 
 
 async def create_draft(
-        owner_discord_id: int,
-        name: str,
-        description: str,
-        pick_type: PickType,
-        packs_per_player: int,
-        cards_per_pack: int,
-        seconds_per_pick: int,
-        max_participants: int,
+    owner_discord_id: int,
+    name: str,
+    description: str,
+    pick_type: PickType,
+    packs_per_player: int,
+    cards_per_pack: int,
+    seconds_per_pick: int,
+    max_participants: int,
 ) -> Draft:
     owner = await get_or_create_user_by_discord_id(owner_discord_id)
 
