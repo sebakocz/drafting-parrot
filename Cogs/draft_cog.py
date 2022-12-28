@@ -4,34 +4,25 @@ import logging
 from datetime import datetime
 
 import discord
-import requests
 from discord import app_commands, Interaction, Attachment
 from discord.ext import commands, tasks
 
-from Components import (
-    user_actions,
-    player_pick_notification,
-    finished_draft_global_notification,
-    open_draft_notification,
-)
-from Components.constants import EMBED_COLOR
-from Database.Models.draft import Draft, DraftStatus, PickType
+import Actions.join_draft_act
+import Actions.leave_draft_act
+import Actions.start_draft_act
+import Actions.stop_draft_act
+import Actions.submit_deck_act
+from Actions import create_draft_act
+
+from Database.Models.draft import Draft, DraftStatus
 from Database.Models.pack import Pack
 from Database.Models.user import User
-from Database.draft_setup import create_draft, get_cards_from_data
-from Utils.collective_api import get_card_data, ApiError
-
-cardpool_format_example = """```
-https://files.collective.gg/p/cards/9803f3b0-2b61-11eb-a0f9-41a57384b22e-s.png
-https://files.collective.gg/p/cards/ee442390-8fce-11eb-9348-5bd7bae36142-s.png
-https://files.collective.gg/p/cards/17d9dd00-627d-11eb-96e6-21b90bd58800-s.png
-Read Leaf Warshaman
-Huntsman's Return
-Head Chieftain Dzikus
-00cb6290-61b4-11ed-82b4-833eed596c50
-612f6fe0-f3e2-11ec-a26e-9defb71be79c
-d43cdd40-612b-11ed-82b4-833eed596c50
-```"""
+from Messages import (
+    finished_draft_global_msg,
+    player_pick_msg,
+    show_all_drafts_msg,
+    open_draft_msg,
+)
 
 
 class DraftCog(commands.Cog):
@@ -74,15 +65,13 @@ class DraftCog(commands.Cog):
             logging.info(
                 f"SEND - Pack to user <{participant.discord_id}> in draft {draft_name} and awaiting response..."
             )
-            view = await player_pick_notification.get_notification(
+            message = await player_pick_msg.get_message(
                 pack,
                 f"{int((draft.rounds_completed) / settings.cards_per_pack) +1}/{settings.packs_per_player}",
             )
-            out = await self.bot.get_user(participant.discord_id).send(
-                embed=view.initial, view=view
-            )
-            view.response = out
-            views.append(view)
+            out = await self.bot.get_user(participant.discord_id).send(**message)
+            message.view.response = out
+            views.append(message.view)
 
         # Create a list of tasks to wait for the participants to pick a card
         # TODO: consider using asyncio.gather -> collect responses
@@ -147,8 +136,8 @@ class DraftCog(commands.Cog):
                 )
 
             # notify global channel that draft has finished
-            embed = await finished_draft_global_notification.get_notification(draft)
-            await self.bot.get_channel(draft.notification_channel_id).send(embed=embed)
+            message = await finished_draft_global_msg.get_message(draft)
+            await self.bot.get_channel(draft.notification_channel_id).send(**message)
 
             return
         else:
@@ -176,178 +165,30 @@ class DraftCog(commands.Cog):
 
     @app_commands.command(name="create_draft")
     async def create_draft(self, interaction: Interaction):
-        await interaction.response.defer()
-
-        async def get_answer(question, timeout=60):
-            await interaction.user.dm_channel.send(question)
-            return await self.bot.wait_for(
-                "message",
-                check=lambda m: m.author == interaction.user
-                and m.channel == interaction.user.dm_channel,
-                timeout=timeout,
-            )
-
-        try:
-            await interaction.user.create_dm()
-        except:
-            await interaction.followup.send(
-                "I can't dm you, please enable dms from server members."
-            )
-            return
-
-        await interaction.followup.send("I've sent you a dm with instructions.")
-
-        try:
-            await interaction.user.dm_channel.send("Hello! Let's create a draft!")
-
-            # get draft name
-            draft_name_msg = await get_answer("What is the name of the draft?")
-            draft_name = draft_name_msg.content.strip()
-
-            # get draft description
-            draft_description_msg = await get_answer(
-                "What is the description of the draft? Mention special rules here as well."
-            )
-            draft_description = draft_description_msg.content.strip()
-
-            # get pick type
-            draft_pick_type_msg = await get_answer(
-                "What is the pick type? `blueprint` -> Up to 3 slots, `singleton` -> 1 slot",
-            )
-            draft_pick_type = draft_pick_type_msg.content.strip()
-            if draft_pick_type not in [pick_type.value for pick_type in PickType]:
-                await interaction.user.dm_channel.send(
-                    "Invalid pick type. Please try again."
-                )
-                return
-
-            # pack options
-            # get packs per player
-            draft_packs_per_player_msg = await get_answer("How many packs per player?")
-            draft_packs_per_player = int(draft_packs_per_player_msg.content.strip())
-
-            # get cards per pack
-            draft_cards_per_pack_msg = await get_answer("How many cards per pack?")
-            draft_cards_per_pack = int(draft_cards_per_pack_msg.content.strip())
-
-            # get thinking time
-            draft_seconds_per_pick_msg = await get_answer(
-                "How much thinking time per pick? (in seconds)"
-            )
-            seconds_per_pick = int(draft_seconds_per_pick_msg.content.strip())
-
-            # get max participants
-            draft_max_participants_msg = await get_answer(
-                "How many maximum participants?"
-            )
-            draft_max_participants = int(draft_max_participants_msg.content.strip())
-
-            # get draft file
-            draft_cardpool_msg = await get_answer(
-                "Please send me a .txt file with the cardpool for the draft. The format is as follows:\n"
-                + cardpool_format_example,
-            )
-            draft_cardpool_url = draft_cardpool_msg.attachments[0].url
-            draft_cardpool_request = requests.get(draft_cardpool_url)
-            draft_cardpool_lines = draft_cardpool_request.text.splitlines()
-
-            # message to confirm processing
-            duration = round(len(draft_cardpool_lines) / 100)
-            await interaction.user.dm_channel.send(
-                f"Thank you! I'll create the draft now. Please wait, this may take {'less than a minute' if duration <= 1 else f'{duration} minutes'}."
-            )
-
-        except TimeoutError:
-            await interaction.user.dm_channel.send(
-                "You took too long to respond, please try again."
-            )
-            return
-        except:
-            logging.exception("Error while creating draft (1/2)")
-            await interaction.user.dm_channel.send(
-                "Something went wrong during the draft creation process (1/2), please try again."
-            )
-            return
-
-        try:
-            # fetch cards
-            draft_cards_data = await get_card_data(draft_cardpool_lines)
-        except ApiError as e:
-            await interaction.user.dm_channel.send(
-                f"Something went wrong while fetching the card data. Please make sure the cardpool is correct and try again.\n{e}"
-            )
-            return
-
-        try:
-            # create draft in database
-            draft = await create_draft(
-                owner_discord_id=interaction.user.id,
-                name=draft_name,
-                description=draft_description,
-                pick_type=PickType(draft_pick_type),
-                packs_per_player=draft_packs_per_player,
-                cards_per_pack=draft_cards_per_pack,
-                seconds_per_pick=seconds_per_pick,
-                max_participants=draft_max_participants,
-            )
-
-            # fill draft with cardpool
-            await get_cards_from_data(draft_cards_data, draft)
-
-            # create draft messages for dm and channel
-            (
-                open_draft_notification_embed,
-                open_draft_notification_view,
-            ) = await open_draft_notification.get_notification(
-                draft_name=draft_name, interaction=interaction
-            )
-
-            await interaction.user.dm_channel.send(
-                "Draft created successfully! Other players can join the draft now."
-            )
-            await interaction.followup.send(
-                embed=open_draft_notification_embed, view=open_draft_notification_view
-            )
-
-        except:
-            logging.exception("Error while creating draft (2/2)")
-            await interaction.user.dm_channel.send(
-                "Something went wrong during the draft creation process (2/2), please try again."
-            )
-            return
+        await create_draft_act.create_draft_dis(interaction)
 
     @app_commands.command(name="show_all_drafts", description="Show all drafts")
     async def show_all_drafts(self, interaction: Interaction):
-        drafts = await Draft.all()
-        embed = discord.Embed(title="All drafts", color=EMBED_COLOR)
-        for draft in drafts:
-            embed.add_field(
-                name=draft.name,
-                value=f"Status: {draft.status}",
-                inline=False,
-            )
-        await interaction.response.send_message(embed=embed)
+        message = await show_all_drafts_msg.get_message()
+        await interaction.response.send_message(**message)
 
     @app_commands.command(name="show_draft", description="Show a draft")
     @app_commands.describe(draft_name="The name of the draft you want to show")
     async def show_draft(self, interaction: Interaction, draft_name: str):
         # create draft messages for channel
-        (
-            open_draft_notification_embed,
-            open_draft_notification_view,
-        ) = await open_draft_notification.get_notification(
+        message = await open_draft_msg.get_message(
             draft_name=draft_name, interaction=interaction
         )
 
-        await interaction.response.send_message(
-            embed=open_draft_notification_embed, view=open_draft_notification_view
-        )
+        await interaction.response.send_message(**message)
 
     @app_commands.command(name="join_draft", description="Join a draft")
     @app_commands.describe(draft_name="The name of the draft you want to join")
     async def join_draft(self, interaction: Interaction, draft_name: str):
         try:
-            response = await user_actions.join_draft(draft_name, interaction.user.id)
+            response = await Actions.join_draft_act.join_draft(
+                draft_name, interaction.user.id
+            )
         except ValueError as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             return
@@ -358,7 +199,9 @@ class DraftCog(commands.Cog):
     @app_commands.describe(draft_name="The name of the draft you want to leave")
     async def leave_draft(self, interaction: Interaction, draft_name: str):
         try:
-            response = await user_actions.leave_draft(draft_name, interaction.user.id)
+            response = await Actions.leave_draft_act.leave_draft(
+                draft_name, interaction.user.id
+            )
         except ValueError as e:
             await interaction.response.send_message(str(e), ephemeral=True)
             return
@@ -372,7 +215,7 @@ class DraftCog(commands.Cog):
         await interaction.response.defer()
         try:
             # set up the draft
-            response, draft = await user_actions.start_draft(
+            response, draft = await Actions.start_draft_act.start_draft(
                 draft_name, interaction.user.id, interaction.channel_id
             )
 
@@ -408,7 +251,7 @@ Good luck and have fun!"""
     async def stop_draft(self, interaction: Interaction, draft_name: str):
         """Stops a draft."""
         try:
-            response, draft = await user_actions.stop_draft(
+            response, draft = await Actions.stop_draft_act.stop_draft(
                 draft_name, interaction.user.id
             )
         except ValueError as e:
@@ -435,7 +278,9 @@ The draft **{draft.name}** has been stopped by the host. If you have any questio
     async def submit_deck(self, interaction: Interaction, decklist: Attachment):
         """Submits a decklist."""
         try:
-            response = await user_actions.submit_deck(decklist, interaction.user.id)
+            response = await Actions.submit_deck_act.submit_deck(
+                decklist, interaction.user.id
+            )
 
         except ValueError as e:
             await interaction.response.send_message(str(e), ephemeral=True)

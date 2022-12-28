@@ -1,10 +1,10 @@
 import discord
 from discord import ui, Interaction
 
-from Components import user_actions
-from Components.notification_utils import settings_field, players_field
+import Actions.join_draft_act
+from Messages.message_utils import settings_field, players_field
 from Database.Models.draft import Draft
-from Components.constants import EMBED_COLOR
+from constants import EMBED_COLOR
 
 
 class Embed(discord.Embed):
@@ -50,7 +50,7 @@ class View(ui.View):
     @ui.button(label="Join Draft \N{RAISED HAND}", style=discord.ButtonStyle.primary)
     async def join_draft(self, interaction: Interaction, _):
         try:
-            response = await user_actions.join_draft(
+            response = await Actions.join_draft_act.join_draft(
                 self.draft.name, interaction.user.id
             )
         except ValueError as e:
@@ -65,8 +65,12 @@ class View(ui.View):
         # await interaction.response.send_message(f"{interaction.user.mention} joined the draft!")
 
 
-async def get_notification(draft_name, interaction):
+async def get_message(draft_name, interaction):
     draft = await Draft.get(name=draft_name).prefetch_related(
         "owner", "participants", "settings"
     )
-    return Embed(interaction, draft), View(draft)
+
+    return {
+        "embed": Embed(interaction, draft),
+        "view": View(draft),
+    }

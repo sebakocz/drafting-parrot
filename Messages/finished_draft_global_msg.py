@@ -1,11 +1,11 @@
 from discord import Embed
 
-from Components.constants import EMBED_COLOR
-from Components.notification_utils import settings_field, players_field
+from constants import EMBED_COLOR
+from Messages.message_utils import settings_field, players_field
 from Database.Models.draft import Draft
 
 
-async def get_notification(draft: Draft):
+async def get_message(draft: Draft):
     await draft.fetch_related("participants", "settings")
 
     embed = Embed(
@@ -27,4 +27,4 @@ async def get_notification(draft: Draft):
         inline=False,
     )
 
-    return embed
+    return {"embed": embed}

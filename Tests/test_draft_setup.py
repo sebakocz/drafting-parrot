@@ -4,7 +4,9 @@ import platform
 
 import pytest
 
-from Components import user_actions
+import Actions.join_draft_act
+import Actions.leave_draft_act
+import Actions.start_draft_act
 from Database import database
 from Database.Models.card import Card
 from Database.Models.draft import PickType, DraftStatus, Draft
@@ -15,7 +17,7 @@ from Database.draft_setup import (
     get_cards_from_data,
     get_or_create_user_by_discord_id,
 )
-from Tests.constants import (
+from Tests.test_constants import (
     OUTPUT_CARD_OBJECTS,
     INPUT_FILE_LINES,
     DRAFT_OPTIONS,
@@ -100,13 +102,13 @@ async def test_can_join_draft():
     # for failure test cases
     user5_id = 131415
 
-    await user_actions.join_draft(draft.name, user1_id)
-    await user_actions.join_draft(draft.name, user2_id)
-    await user_actions.join_draft(draft.name, user3_id)
-    await user_actions.join_draft(draft.name, user4_id)
+    await Actions.join_draft_act.join_draft(draft.name, user1_id)
+    await Actions.join_draft_act.join_draft(draft.name, user2_id)
+    await Actions.join_draft_act.join_draft(draft.name, user3_id)
+    await Actions.join_draft_act.join_draft(draft.name, user4_id)
 
     with pytest.raises(ValueError):
-        await user_actions.join_draft(
+        await Actions.join_draft_act.join_draft(
             draft.name, user5_id
         ), "Should not be able to join draft due to max players"
 
@@ -135,7 +137,7 @@ async def test_can_join_and_create_multiple_drafts():
 
     user_id = 123
 
-    await user_actions.join_draft(draft1.name, user_id)
+    await Actions.join_draft_act.join_draft(draft1.name, user_id)
 
     await draft1.fetch_related("participants")
     await draft2.fetch_related("participants")
@@ -152,18 +154,18 @@ async def test_can_leave_draft():
     user_id = 123
 
     with pytest.raises(ValueError):
-        await user_actions.leave_draft(
+        await Actions.leave_draft_act.leave_draft(
             "non-existant-draft", user_id
         ), "Should not be able to leave draft that does not exist"
 
     draft = await create_draft(**DRAFT_OPTIONS)
 
-    await user_actions.join_draft(draft.name, user_id)
+    await Actions.join_draft_act.join_draft(draft.name, user_id)
 
-    await user_actions.leave_draft(draft.name, user_id)
+    await Actions.leave_draft_act.leave_draft(draft.name, user_id)
 
     with pytest.raises(ValueError):
-        await user_actions.leave_draft(
+        await Actions.leave_draft_act.leave_draft(
             draft.name, user_id
         ), "Should not be able to leave draft that user is not in"
 
@@ -193,14 +195,16 @@ async def test_can_start_draft():
     ]
 
     for participant in participants:
-        await user_actions.join_draft(draft.name, participant.discord_id)
+        await Actions.join_draft_act.join_draft(draft.name, participant.discord_id)
 
     with pytest.raises(ValueError):
-        await user_actions.start_draft(
+        await Actions.start_draft_act.start_draft(
             draft.name, participants[1].discord_id, 123
         ), "Should not be able to start draft if not owner"
 
-    await user_actions.start_draft(draft.name, participants[0].discord_id, 123)
+    await Actions.start_draft_act.start_draft(
+        draft.name, participants[0].discord_id, 123
+    )
 
     draft = await Draft.get(name=draft.name)
     await draft.fetch_related("participants", "settings", "packs__cards")

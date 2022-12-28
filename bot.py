@@ -50,6 +50,7 @@ class MyBot(commands.Bot):
 
         await bot.load_extension("Cogs.admin_cog")
         await bot.load_extension("Cogs.draft_cog")
+        await bot.load_extension("Cogs.misc_cog")
 
         if is_dev:
             await bot.load_extension("Cogs.test_cog")

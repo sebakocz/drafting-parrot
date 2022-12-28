@@ -5,7 +5,7 @@ from typing import List
 import discord
 from discord import ui, Interaction, Embed
 
-from Components import user_actions, constants
+import constants
 from Database.Models.pack import Pack
 
 
@@ -81,7 +81,7 @@ class View(ui.View):
         await interaction.response.edit_message(embed=self._queue[0])
 
 
-async def get_notification(pack: Pack, pack_index: str = "1/1"):
+async def get_message(pack: Pack, pack_index: str = "1/1"):
     await pack.fetch_related("cards")
     cards = await pack.cards
 
@@ -96,4 +96,9 @@ async def get_notification(pack: Pack, pack_index: str = "1/1"):
         embed.set_image(url=card.link)
         embeds.append(embed)
 
-    return View(pack, embeds)
+    view = View(pack, embeds)
+
+    return {
+        "embed": view.initial,
+        "view": view,
+    }

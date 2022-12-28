@@ -3,23 +3,17 @@
 import logging
 import random
 
-import discord
 from discord import app_commands, Interaction
 from discord.ext import commands
 
-from Components.constants import EMBED_COLOR
-from Components.user_actions import join_draft
+from Actions.join_draft_act import join_draft
 from Database.Models.card import Card
 from Database.Models.draft import Draft
 from Database.Models.pack import Pack
 from Database.Models.user import User
 from Database.draft_setup import create_draft, get_cards_from_data
-from Components import (
-    open_draft_notification,
-    player_pick_notification,
-    finished_draft_global_notification,
-)
-from Tests.constants import DRAFT_OPTIONS, CARDS_LIST_LONG
+from Messages import finished_draft_global_msg, player_pick_msg, open_draft_msg
+from Tests.test_constants import DRAFT_OPTIONS, CARDS_LIST_LONG
 
 
 class NoOwnerError(commands.CommandError):
@@ -41,7 +35,7 @@ class TestCog(commands.GroupCog, name="test"):
         await ctx.send(error)
 
     @app_commands.command()
-    async def open_draft_notification(self, interaction: Interaction):
+    async def open_draft_message(self, interaction: Interaction):
         await interaction.response.defer()
 
         # clear test draft
@@ -53,10 +47,10 @@ class TestCog(commands.GroupCog, name="test"):
         draft = await create_draft(**DRAFT_OPTIONS)
 
         # send test notification
-        embed, view = await open_draft_notification.get_notification(
+        message = await open_draft_msg.get_message(
             draft_name=DRAFT_OPTIONS["name"], interaction=interaction
         )
-        await interaction.followup.send(embed=embed, view=view)
+        await interaction.followup.send(**message)
 
     @app_commands.command()
     async def finished_global_notification(self, interaction: Interaction):
@@ -69,11 +63,11 @@ class TestCog(commands.GroupCog, name="test"):
         draft = await create_draft(**DRAFT_OPTIONS)
 
         # send test notification
-        embed = await finished_draft_global_notification.get_notification(draft)
-        await interaction.followup.send(embed=embed)
+        message = await finished_draft_global_msg.get_message(draft)
+        await interaction.followup.send(**message)
 
     @app_commands.command()
-    async def player_pick_card_notification(self, interaction: Interaction):
+    async def player_pick_card_msg(self, interaction: Interaction):
         await interaction.response.defer()
 
         # creating draft, loading cards and shuffling packs and distributing doesn't make sense here
@@ -94,9 +88,9 @@ class TestCog(commands.GroupCog, name="test"):
         pack = await Pack.create(draft=draft)
         await pack.cards.add(*cards)
 
-        view = await player_pick_notification.get_notification(pack)
+        message = await player_pick_msg.get_message(pack)
 
-        await interaction.followup.send(embed=view.initial, view=view)
+        await interaction.followup.send(**message)
 
     # @app_commands.command()
     # async def run_draft(self, interaction: Interaction, draft_name: str, interval: int = 5):
