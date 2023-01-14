@@ -16,23 +16,10 @@ from Messages import finished_draft_global_msg, player_pick_msg, open_draft_msg
 from Tests.test_constants import DRAFT_OPTIONS, CARDS_LIST_LONG
 
 
-class NoOwnerError(commands.CommandError):
-    pass
-
-
 class TestCog(commands.GroupCog, name="test"):
     def __init__(self, bot):
         logging.info("Loading Cog: test_cog.py")
         self.bot = bot
-
-    async def cog_check(self, ctx):
-        if not await self.bot.is_owner(ctx.author):
-            raise NoOwnerError("You are not strong enough for my potions.")
-        return True
-
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        await ctx.send(error)
 
     @app_commands.command()
     async def open_draft_message(self, interaction: Interaction):
