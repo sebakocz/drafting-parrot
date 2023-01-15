@@ -126,7 +126,7 @@ class DraftCog(commands.Cog):
 
             # TODO: this is just a placeholder for now, need to be prettier, probably needs to be a separate function like 'notify_participants'
             # notify participants that the draft has finished
-            message = "The draft has finished! Take your time brewing and let me know with `/submit_deck` (**not here** in DMs!) when you're ready. Here is your cardlist:\n"
+            message = "The draft has finished! Take your time brewing and let me know with `/submit_deck` (**not in DMs!**) when you're ready. Here is your cardlist:\n"
             for participant in participants:
                 cards = await participant.deck.all()
                 deck_string = "\n1 ".join([card.link for card in cards])

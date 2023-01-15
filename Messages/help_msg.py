@@ -52,7 +52,7 @@ async def get_message():
 
     embed.add_field(
         name="/join_draft",
-        value="When you find a cool draft you're interesting in join by typing `/join_draft <draft_name>`",
+        value="When you find a cool draft you're interested in join by typing `/join_draft <draft_name>`",
         inline=False,
     )
 
