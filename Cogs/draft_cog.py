@@ -70,8 +70,8 @@ class DraftCog(commands.Cog):
                 f"{int((draft.rounds_completed) / settings.cards_per_pack) +1}/{settings.packs_per_player}",
             )
             out = await self.bot.get_user(participant.discord_id).send(**message)
-            message.view.response = out
-            views.append(message.view)
+            message["view"].response = out
+            views.append(message["view"])
 
         # Create a list of tasks to wait for the participants to pick a card
         # TODO: consider using asyncio.gather -> collect responses
