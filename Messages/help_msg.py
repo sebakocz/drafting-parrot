@@ -7,13 +7,15 @@ from constants import EMBED_COLOR
 
 
 class View(ui.View):
-    def __init__(self):
+    def __init__(self, embed: discord.Embed):
+        self.embed = embed
+        self.response = None
         super().__init__()
-        url = "https://github.com/sebakocz/mopping-mucus"
 
         # Link buttons cannot be made with the decorator
         # Therefore we have to manually create one.
         # We add the quoted url to the button, and add the button to the view.
+        url = "https://github.com/sebakocz/mopping-mucus"
         self.add_item(ui.Button(label="Contribute \N{PERSONAL COMPUTER}", url=url))
 
     # button for showing all drafts
@@ -32,6 +34,13 @@ class View(ui.View):
     async def explain(self, interaction: Interaction, _):
         message = explain_msg.get_message()
         await interaction.response.send_message(**message)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+
+        self.embed.set_footer(text="Buttons are disabled due to inactivity. Call the command again to re-enable them.")
+        await self.response.edit(embed=self.embed, view=self)
 
 
 async def get_message():
@@ -64,5 +73,5 @@ async def get_message():
 
     return {
         "embed": embed,
-        "view": View(),
+        "view": View(embed=embed),
     }
