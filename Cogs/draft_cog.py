@@ -129,11 +129,14 @@ class DraftCog(commands.Cog):
             message = "The draft has finished! Take your time brewing and let me know with `/submit_deck` (**not in DMs!**) when you're ready. Here is your cardlist:\n"
             for participant in participants:
                 cards = await participant.deck.all()
-                deck_string = "\n1 ".join([card.link for card in cards])
-                deck_string = "```1 " + deck_string + "```"
-                await self.bot.get_user(participant.discord_id).send(
-                    message + deck_string
-                )
+                deck_string = "1 " + "\n1 ".join([card.link for card in cards])
+                with open("Data/output_deck.txt", "w") as file:
+                    file.write(deck_string)
+
+                with open("Data/output_deck.txt", "rb") as file:
+                    await self.bot.get_user(participant.discord_id).send(
+                        message, file=discord.File("Data/output_deck.txt")
+                    )
 
             # notify global channel that draft has finished
             message = await finished_draft_global_msg.get_message(draft)
